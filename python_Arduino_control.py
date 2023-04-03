@@ -1,7 +1,7 @@
-#################################################
-# Test 1 of controlling Arduino with python GUI:
+#############################################################
+# Test 1 of Arduino and Python communication:
 # GUI to turn ON/OFF LED connected to Arduino
-#################################################
+#############################################################
 
 from tkinter import *
 from pyfirmata import Arduino
