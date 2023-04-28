@@ -1,8 +1,9 @@
 from tkinter import *
 from datetime import datetime
-from pyfirmata import Arduino
 import serial
 import time
+import RPi.GPIO as GPIO
+import pygame
 
 class GUI(Frame):
     def __init__(self, win):
@@ -84,8 +85,8 @@ class GUI(Frame):
         GUI.tempCtrl.grid(row = 5, column = 0, stick = N+S+E+W)
         
         #test button to arm system. Eventually will arm automatically
-        GUI.arms = Button(self, bg = "white", text = "", borderwidth = 1, command = lambda: self.arm())
-        GUI.arms.grid(row = 5, column = 1, stick = N+S+E+W)
+        #GUI.arms = Button(self, bg = "white", text = "", borderwidth = 1, command = lambda: self.arm())
+        #GUI.arms.grid(row = 5, column = 1, stick = N+S+E+W)
         
         #display whether or not the system is armed
         GUI.isArmed = Label(self, bg = "green", text = "Safe", borderwidth = 1, relief = "raised")
@@ -123,7 +124,7 @@ class GUI(Frame):
         global code
         text = self.display["text"]
         
-        if(len(str)>0 and len(text) < 4and newCode == False):
+        if(len(str)>0 and len(text) < 4 and newCode == False):
             if(len(code) < 4):
                 code += str
             text += str
@@ -146,9 +147,12 @@ class GUI(Frame):
         armed = True
         
     def reset(self):
-        self.display["text"] = "Input new passcode"
-        global newCode
-        newCode = True
+        global armed
+        if(not armed):
+            self.display["text"] = "Input new passcode"
+            global newCode
+            newCode = True
+        
     
     def readCode(self):
         global code
@@ -157,9 +161,15 @@ class GUI(Frame):
             global armed
             armed = False
             self.display["text"] = ""
+            GPIO.output(25, GPIO.HIGH)
+            time.sleep(0.5)
         
-        
-    
+pygame.init()       
+pygame.mixer.init()
+alarmsound = pygame.mixer.Sound("alarm.wav")
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(25, GPIO.OUT)
+GPIO.setup(17, GPIO.OUT)
 window = Tk()
 window.title("KEYPAD")
 k = GUI(window)
@@ -170,8 +180,7 @@ global armed
 global curTemp
 global goalTemp
 global packTime
-board = Arduino("COM3")
-arduino = serial.Serial(port="COM3", baudrate=115200, timeout=.1)
+arduino = serial.Serial(port="/dev/ttyACM0", baudrate=115200, timeout=.1)
 time.sleep(2)
 
 while(True):
@@ -179,27 +188,31 @@ while(True):
     string = line.decode()
     data = string.split(",")
     
-    curTemp = float(data[2])
-    moved = int(data[1])
-    detected = int(data[0])
-    
-    if(detected == 1):
-        GUI.arm()
-    if(moved == 1 and armed == True):
-        #play sound
-        pass
-    
+    if len(data) == 3:
+        curTemp = float(data[2])
+        moved = int(data[1])
+        detected = int(data[0])
+        
+        if(detected == 1):
+            GUI.arm(k)
+        if(moved == 1 and armed == True):
+            pygame.mixer.music.load("alarm.wav")
+            pygame.mixer.music.play()
+        if(moved == 0):
+            pygame.mixer.music.stop()
+            
+                         
+    GUI.readCode(k)
     print("newCode T/F: {}".format(newCode))
     print("code: {}".format(code))
     print("tempON: {}".format(tempON))
-    board.digital[4].write(int(tempON))             #Pin 4 controls fans on or off
+    #GPIO.output(17, int(tempON))                    #Pin 17 controls fans on or off
     print("armed: {}".format(armed))
-    board.digital[2].write(int(armed))              #Pin 2 controls whether or not system is armed
+    #GPIO.output(25, int(armed))                     #Pin 25 controls whether or not system is armed             
     print("curTemp: {}".format(curTemp))
     print("goalTemp: {}".format(goalTemp))
     print("packTime: {}".format(packTime))
     
-    GUI.readCode(k)
     
     #Add method to change curTemp to a value read from PIN
     GUI.cTemp.config(text = curTemp)
@@ -207,16 +220,17 @@ while(True):
     if(armed):
         GUI.isArmed.config(text = "Armed", bg = "red")
         GUI.bottom.config(text = "Package delivered at {}".format(packTime.strftime("%H:%M:%S")))
-        arduino.digital[6].write(1)
+        #GPIO.output(25, GPIO.HIGH)
     else:
         GUI.isArmed.config(text = "Safe", bg = "green")
         GUI.bottom.config(text = "No package detected")
-        arduino.digital[6].write(0)
-        
+        GPIO.output(25, GPIO.LOW)        
     if(tempON):
         GUI.tempCtrl.config(text = "Temp On")
+        GPIO.output(17, GPIO.HIGH)
     else:
         GUI.tempCtrl.config(text = "Temp Off")
+        GPIO.output(17, GPIO.LOW)
     
     window.update()
 
