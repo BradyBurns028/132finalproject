@@ -206,9 +206,7 @@ while(True):
     print("newCode T/F: {}".format(newCode))
     print("code: {}".format(code))
     print("tempON: {}".format(tempON))
-    #GPIO.output(17, int(tempON))                    #Pin 17 controls fans on or off
-    print("armed: {}".format(armed))
-    #GPIO.output(25, int(armed))                     #Pin 25 controls whether or not system is armed             
+    print("armed: {}".format(armed))         
     print("curTemp: {}".format(curTemp))
     print("goalTemp: {}".format(goalTemp))
     print("packTime: {}".format(packTime))
@@ -220,7 +218,6 @@ while(True):
     if(armed):
         GUI.isArmed.config(text = "Armed", bg = "red")
         GUI.bottom.config(text = "Package delivered at {}".format(packTime.strftime("%H:%M:%S")))
-        #GPIO.output(25, GPIO.HIGH)
     else:
         GUI.isArmed.config(text = "Safe", bg = "green")
         GUI.bottom.config(text = "No package detected")
