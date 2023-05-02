@@ -157,6 +157,7 @@ class GUI(Frame):
     def readCode(self):
         global code
         text = self.display["text"]
+        # unlocks box if password entry is correct
         if(text == code and len(code) == 4):
             global armed
             armed = False
@@ -184,6 +185,7 @@ arduino = serial.Serial(port="/dev/ttyACM0", baudrate=115200, timeout=.1)
 time.sleep(2)
 
 while(True):
+    # reading data from Arduino's Serial monitor
     line = arduino.readline()
     string = line.decode()
     data = string.split(",")
@@ -195,6 +197,7 @@ while(True):
         
         if(detected == 1):
             GUI.arm(k)
+        # alarm if the box is locked and being moved
         if(moved == 1 and armed == True):
             pygame.mixer.music.load("alarm.wav")
             pygame.mixer.music.play()
@@ -221,12 +224,15 @@ while(True):
     else:
         GUI.isArmed.config(text = "Safe", bg = "green")
         GUI.bottom.config(text = "No package detected")
+        # sends a signal to pin 25 which sends a signal to an Arduino pin to unlock the lock
         GPIO.output(25, GPIO.LOW)        
     if(tempON):
         GUI.tempCtrl.config(text = "Temp On")
+        # sends a signal to pin 17 which sends a signal to an Arduino pin to turn the fans on
         GPIO.output(17, GPIO.HIGH)
     else:
         GUI.tempCtrl.config(text = "Temp Off")
+        # sends a signal to pin 17 which sends a signal to an Arduino pin to turn the fans off
         GPIO.output(17, GPIO.LOW)
     
     window.update()
